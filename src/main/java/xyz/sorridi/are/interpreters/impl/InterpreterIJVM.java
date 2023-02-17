@@ -1,8 +1,9 @@
 package xyz.sorridi.are.interpreters.impl;
 
 import lombok.Getter;
-import xyz.sorridi.are.ijvm.IOperationIJVM;
+import lombok.SneakyThrows;
 import xyz.sorridi.are.ijvm.PointerIJVM;
+import xyz.sorridi.are.ijvm.impl.StackIJVM;
 import xyz.sorridi.are.ijvm.data.impl.ConstantIJVM;
 import xyz.sorridi.are.ijvm.data.impl.LabelIJVM;
 import xyz.sorridi.are.ijvm.data.impl.MethodIJVM;
@@ -16,10 +17,8 @@ import java.util.*;
 import static xyz.sorridi.are.ijvm.PointerIJVM.*;
 
 @Getter
-public class InterpreterIJVM extends Interpreter implements IOperationIJVM
+public class InterpreterIJVM extends Interpreter
 {
-    private final Stack<Integer> stackPointer;
-    private int programCounter;
     private boolean wide, halt;
 
     private MethodIJVM main;
@@ -32,7 +31,6 @@ public class InterpreterIJVM extends Interpreter implements IOperationIJVM
     {
         super("IJVM");
 
-        stackPointer    = new Stack<>();
         methods         = new HashMap<>();
         constants       = new HashMap<>();
         variables       = new HashMap<>();
@@ -187,20 +185,22 @@ public class InterpreterIJVM extends Interpreter implements IOperationIJVM
     }
 
     @Override
-    public void execute(String input)
+    public void execute(String input, Object stack)
     {
-        execute(transform(input, "\n"));
+        execute(transform(input, "\n"), stack);
     }
 
+    @SneakyThrows
     @Override
-    public <L extends List<String>> void execute(L instructions)
+    public <L extends List<String>> void execute(L instructions, Object stack)
     {
-        boolean started = false;
-        int size = instructions.size();
+        StackIJVM stackIJVM = (StackIJVM) stack;
+        boolean started     = false;
+        int size            = instructions.size();
 
-        System.out.println("size is " + size);
+        System.out.println("size of execute is " + size);
 
-        for (programCounter = 0; programCounter < size; programCounter++)
+        for (int programCounter = 0; programCounter < size; programCounter++)
         {
             if (halt)
             {
@@ -209,21 +209,25 @@ public class InterpreterIJVM extends Interpreter implements IOperationIJVM
 
             String instruction = instructions.get(programCounter);
 
+            if (!instruction.isEmpty())
+            {
+                Thread.sleep(1000);
+            }
+
             if (instruction.startsWith(".main"))
             {
                 started = true;
                 continue;
             }
 
-            if (instruction.isEmpty())
+            if (instruction.isEmpty() || instruction.startsWith("//"))
             {
                 continue;
             }
 
             warning(" ");
-            warning("Instruction: " + instruction);
-            warning("Stack: " + stackPointer);
-            warning("Program counter: " + programCounter);
+            warning("(" + programCounter + ") Instruction: " + instruction);
+            warning("Stack PRE: " + stackIJVM);
 
             String[] split = instruction.split(" ");
             String opcode  = split[0];
@@ -233,371 +237,144 @@ public class InterpreterIJVM extends Interpreter implements IOperationIJVM
             {
                 case "BIPUSH":
                 {
-                    bipush(arg);
+                    stackIJVM.bipush(arg);
                     break;
                 }
                 case "DUP":
                 {
-                    dup();
+                    stackIJVM.dup();
                     break;
                 }
                 case "ERR":
                 {
-                    err();
+                    stackIJVM.err();
                     break;
                 }
                 case "GOTO":
                 {
-                    error("goto from line " + programCounter + " to " + arg);
-                    _goto(arg);
-                    error("goto is now at line " + programCounter + " to " + arg);
+                    programCounter = stackIJVM._goto(labels, arg);
                     break;
                 }
                 case "HALT":
                 {
-                    halt();
+                    halt = stackIJVM.halt();
                     break;
                 }
                 case "IADD":
                 {
-                    iadd();
+                    stackIJVM.iadd();
                     break;
                 }
                 case "IAND":
                 {
-                    iand();
+                    stackIJVM.iand();
                     break;
                 }
                 case "IFEQ":
                 {
-                    ifeq(arg);
+                    int gotoResult = stackIJVM.ifeq(labels, arg);
+
+                    if (gotoResult != -1)
+                    {
+                        programCounter = gotoResult;
+                    }
                     break;
                 }
                 case "IFLT":
                 {
-                    iflt(arg);
+                    int gotoResult = stackIJVM.iflt(labels, arg);
+
+                    if (gotoResult != -1)
+                    {
+                        programCounter = gotoResult;
+                    }
                     break;
                 }
                 case "IF_ICMPEQ":
                 {
-                    if_icmpeq(arg);
+                    int gotoResult = stackIJVM.if_icmpeq(labels, arg);
+
+                    if (gotoResult != -1)
+                    {
+                        programCounter = gotoResult;
+                    }
                     break;
                 }
                 case "IINC":
                 {
-                    iinc(arg, split[2]);
+                    stackIJVM.iinc(variables, arg, split[2]);
                     break;
                 }
                 case "ILOAD":
                 {
-                    iload(arg);
+                    stackIJVM.iload(variables, arg);
                     break;
                 }
                 case "INPUT":
                 {
-                    input("Test");
+                    stackIJVM.input("Test");
                     break;
                 }
                 case "INVOKEVIRTUAL":
                 {
-                    invokevirtual(arg);
+                    stackIJVM.invokevirtual(this, methods, arg);
                     break;
                 }
                 case "IOR":
                 {
-                    ior();
+                    stackIJVM.ior();
                     break;
                 }
                 case "IRETURN":
                 {
-                    ireturn();
+                    stackIJVM.ireturn();
                     break;
                 }
                 case "ISTORE":
                 {
-                    istore(arg);
+                    stackIJVM.istore(variables, arg);
                     break;
                 }
                 case "ISUB":
                 {
-                    isub();
+                    stackIJVM.isub();
                     break;
                 }
                 case "LDC_W":
                 {
-                    ldc_w(arg);
+                    stackIJVM.ldc_w(constants, arg);
                     break;
                 }
                 case "NOP":
                 {
-                    nop();
+                    stackIJVM.nop();
                     break;
                 }
                 case "OUT":
                 {
-                    output();
+                    stackIJVM.output();
                     break;
                 }
                 case "POP":
                 {
-                    pop();
+                    stackIJVM.pop();
                     break;
                 }
                 case "SWAP":
                 {
-                    swap();
+                    stackIJVM.swap();
                     break;
                 }
                 case "WIDE":
                 {
-                    wide();
+                    wide = stackIJVM.wide();
                     break;
                 }
             }
+            warning("Stack POST: " + stackIJVM);
         }
 
-        warning("Stack finale: " + stackPointer);
-    }
-
-    @Override
-    public void bipush(String value)
-    {
-        bipush(Decode.num(value));
-    }
-
-    @Override
-    public void bipush(int value)
-    {
-        stackPointer.push(value);
-    }
-
-    @Override
-    public void dup()
-    {
-        stackPointer.push(stackPointer.peek());
-    }
-
-    @Override
-    public void err()
-    {
-        throw new RuntimeException("Error!");
-    }
-
-    @Override
-    public void _goto(String label)
-    {
-        LabelIJVM labelIJVM = labels.get(label);
-
-        if (labelIJVM == null)
-        {
-            throw new RuntimeException("Label '" + label + "' not found!");
-        }
-
-        programCounter = labelIJVM.getInstructionNumber();
-    }
-
-    @Override
-    public void halt()
-    {
-        halt = true;
-    }
-
-    @Override
-    public void iadd()
-    {
-        bipush(pop() + pop());
-    }
-
-    @Override
-    public void iand()
-    {
-        bipush(pop() & pop());
-    }
-
-    @Override
-    public void ifeq(String label)
-    {
-        int value = pop();
-
-        if (value == 0)
-        {
-            _goto(label);
-        }
-    }
-
-    @Override
-    public void iflt(String label)
-    {
-        int value = pop();
-
-        if (value < 0)
-        {
-            _goto(label);
-        }
-    }
-
-    @Override
-    public void if_icmpeq(String label)
-    {
-        int value1 = pop();
-        int value2 = pop();
-
-        if (value1 == value2)
-        {
-            _goto(label);
-        }
-    }
-
-    @Override
-    public void iinc(String varName, String value)
-    {
-        iinc(varName, Decode.num(value));
-    }
-
-    @Override
-    public void iinc(String varName, int value)
-    {
-        VariableIJVM variable = variables.get(varName);
-
-        if (variable == null)
-        {
-            throw new RuntimeException("Variable '" + varName + "' not found!");
-        }
-
-        variable.setValue(variable.getValue() + value);
-    }
-
-    @Override
-    public void iload(String varName)
-    {
-        VariableIJVM variable = variables.get(varName);
-
-        if (variable == null)
-        {
-            throw new RuntimeException("Variable '" + varName + "' not found!");
-        }
-
-        bipush(variable.getValue());
-    }
-
-    @Override
-    public void input(String character)
-    {
-        if (character == null)
-        {
-            bipush(0);
-        }
-        else
-        {
-            bipush(character.charAt(0));
-        }
-    }
-
-    @Override
-    public void invokevirtual(String method)
-    {
-        MethodIJVM methodIJVM = methods.get(method);
-
-        if (methodIJVM == null)
-        {
-            throw new RuntimeException("Method '" + method + "' not found!");
-        }
-
-        int argNum      = methodIJVM.getArgumentsNumber();
-        int[] arguments = new int[argNum];
-
-        for (int i = 0; i < argNum; i++)
-        {
-            arguments[i] = pop();
-        }
-
-        execute(methodIJVM.getInstructions());
-
-        for (int i = 0; i < argNum; i++)
-        {
-            bipush(arguments[i]);
-        }
-    }
-
-    @Override
-    public void ior()
-    {
-        bipush(pop() | pop());
-    }
-
-    @Override
-    public int ireturn()
-    {
-        return pop();
-    }
-
-    @Override
-    public void istore(String varName)
-    {
-        VariableIJVM variable = variables.get(varName);
-
-        if (variable == null)
-        {
-            throw new RuntimeException("Variable '" + varName + "' not found!");
-        }
-
-        variable.setValue(pop());
-    }
-
-    @Override
-    public void isub()
-    {
-        int value1 = pop();
-        int value2 = pop();
-
-        bipush(value2 - value1);
-    }
-
-    @Override
-    public void ldc_w(String constantName)
-    {
-        ConstantIJVM constant = constants.get(constantName);
-
-        if (constant == null)
-        {
-            throw new RuntimeException("Constant '" + constantName + "' not found!");
-        }
-
-        bipush(constant.getValue());
-    }
-
-    @Override
-    public void nop()
-    {
-
-    }
-
-    @Override
-    public void output()
-    {
-        System.out.println(pop());
-    }
-
-    @Override
-    public int pop()
-    {
-        return stackPointer.pop();
-    }
-
-    @Override
-    public void swap()
-    {
-        int value1 = pop();
-        int value2 = pop();
-
-        bipush(value1);
-        bipush(value2);
-    }
-
-    @Override
-    public void wide()
-    {
-        wide = true;
+        warning("QUIT Stack: " + stackIJVM);
     }
 
 }

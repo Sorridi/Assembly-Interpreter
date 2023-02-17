@@ -1,5 +1,14 @@
 package xyz.sorridi.are.ijvm;
 
+import xyz.sorridi.are.ijvm.data.impl.ConstantIJVM;
+import xyz.sorridi.are.ijvm.data.impl.LabelIJVM;
+import xyz.sorridi.are.ijvm.data.impl.MethodIJVM;
+import xyz.sorridi.are.ijvm.data.impl.VariableIJVM;
+import xyz.sorridi.are.interpreters.Interpreter;
+
+import java.util.HashMap;
+import java.util.Stack;
+
 public interface IOperationIJVM
 {
     void bipush(String value);
@@ -9,47 +18,45 @@ public interface IOperationIJVM
 
     void err();
 
-    void _goto(String label);
+    int _goto(HashMap<String, LabelIJVM> labels, String label);
 
-    void halt();
+    boolean halt();
 
     void iadd();
 
     void iand();
 
-    void ifeq(String label);
+    int ifeq(HashMap<String, LabelIJVM> labels, String label);
 
-    void iflt(String label);
+    int iflt(HashMap<String, LabelIJVM> labels, String label);
 
-    void if_icmpeq(String label);
+    int if_icmpeq(HashMap<String, LabelIJVM> labels, String label);
 
-    void iinc(String varName, String value);
-    void iinc(String varName, int value);
+    void iinc(HashMap<String, VariableIJVM> variables, String varName, String value);
+    void iinc(HashMap<String, VariableIJVM> variables, String varName, int value);
 
-    void iload(String varName);
+    void iload(HashMap<String, VariableIJVM> variables, String varName);
 
     void input(String character);
 
-    void invokevirtual(String methodName);
+    void invokevirtual(Interpreter interpreter, HashMap<String, MethodIJVM> methods, String methodName);
 
     void ior();
 
-    int ireturn();
+    void ireturn();
 
-    void istore(String varName);
+    void istore(HashMap<String, VariableIJVM> variables, String varName);
 
     void isub();
 
-    void ldc_w(String constantName);
+    void ldc_w(HashMap<String, ConstantIJVM> constants, String constantName);
 
     void nop();
 
     void output();
 
-    int pop();
-
     void swap();
 
-    void wide();
+    boolean wide();
 
 }

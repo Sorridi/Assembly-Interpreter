@@ -4,6 +4,7 @@ import xyz.sorridi.are.utils.LogFormatter;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Stack;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.Logger;
 
@@ -41,8 +42,8 @@ public abstract class Interpreter implements IScanner
         logger.severe(message);
     }
 
-    public abstract void execute(String instructions);
+    public abstract void execute(String instructions, Object stack);
 
-    public abstract <L extends List<String>> void execute(L instructions);
+    public abstract <L extends List<String>> void execute(L instructions, Object stack);
 
 }

@@ -1,5 +1,6 @@
 package xyz.sorridi.are;
 
+import xyz.sorridi.are.ijvm.impl.StackIJVM;
 import xyz.sorridi.are.interpreters.impl.InterpreterIJVM;
 
 import java.util.List;
@@ -20,24 +21,24 @@ public class Main
                         "b",
                         "c",
                     ".end-var",
-                    "BIPUSH 0x3",
+                    "BIPUSH 0x3",       // 3
                     "testing:",
-                        "BIPUSH 0x5",
-                        "ISTORE a",
-                        "BIPUSH 0x5",
-                        "ISTORE b",
+                        "BIPUSH 0x5",   // 5
+                        "ISTORE a",     // a = 5
+                        "BIPUSH 0x5",   // 5
+                        "ISTORE b",     // b = 5
                         "GOTO label2",
                         "ILOAD a",
                         "ILOAD b",
                         "IADD",
                         "ISTORE c",
                     "label2:",
-                        "ILOAD a",
-                        "ILOAD b",
-                        "ILOAD c",
-                        "IADD",
-                        "IADD",
-                        "HALT",
+                        "ILOAD a",      // 5
+                        "ILOAD b",      // 5
+                        "ILOAD c",      // 0
+                        "INVOKEVIRTUAL test",   // 5, 5, 0
+                        "IADD",         // 3 + 10
+                        "HALT",         // stop
                         "ISTORE c",
                         "BIPUSH 0x10",
                         "ILOAD c",
@@ -45,14 +46,17 @@ public class Main
                 ".end-main",
                 "",
                 ".method test(a, b, c)",
-                    "ILOAD a",
-                    "ILOAD b",
-                    "ILOAD c",
+                    "ILOAD a",  // 5
+                    "ILOAD b",  // 5
+                    "ILOAD c",  // 0
+                    "IADD",     // 5
+                    "IADD",     // 10
+                    "IRETURN",  // 10
                 ".end-method");
 
         InterpreterIJVM interpreterIjvm = new InterpreterIJVM();
         interpreterIjvm.scan(input);
-        interpreterIjvm.execute(input);
+        interpreterIjvm.execute(input, new StackIJVM());
     }
 
 }
